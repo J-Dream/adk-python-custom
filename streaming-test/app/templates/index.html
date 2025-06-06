@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multimodal Agent Interface</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { display: flex; flex-direction: column; align-items: center; }
+        .video-container { border: 1px solid #ccc; margin-bottom: 20px; min-width: 320px; min-height: 240px; background-color: #000;}
+        .chat-container { width: 80%; max-width: 600px; margin-bottom: 20px; }
+        .chat-box { height: 300px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; background-color: #fff; margin-bottom: 10px; }
+        .chat-message { margin-bottom: 8px; padding: 5px; border-radius: 4px; }
+        .user-message { background-color: #e1f5fe; text-align: right; }
+        .model-message { background-color: #f0f4c3; }
+        .controls { display: flex; justify-content: center; align-items: center; width: 80%; max-width: 600px; }
+        #chatInput { flex-grow: 1; padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;}
+        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; background-color: #4CAF50; color: white; }
+        button:hover { background-color: #45a049; }
+        .status { margin-top: 10px; font-style: italic; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Live Multimodal Agent</h1>
+
+        <div class="video-container">
+            <img id="videoFeed" src="/video_feed" width="640" height="480" alt="Video Feed">
+        </div>
+
+        <div class="chat-container">
+            <div id="chatBox" class="chat-box">
+                <!-- Chat messages will appear here -->
+            </div>
+            <div class="controls">
+                <input type="text" id="chatInput" placeholder="Type your message...">
+                <button onclick="sendChatMessage()">Send</button>
+            </div>
+            <div class="status" id="statusArea">Agent status will appear here.</div>
+        </div>
+         <button onclick="startAgent()">Start Agent</button>
+         <button onclick="stopAgent()">Stop Agent</button>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const chatInput = document.getElementById('chatInput');
+        const statusArea = document.getElementById('statusArea');
+
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-message', sender + '-message');
+            messageDiv.textContent = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll
+        }
+
+        async function sendChatMessage() {
+            const messageText = chatInput.value;
+            if (!messageText.trim()) return;
+
+            addMessage(messageText, 'user');
+            chatInput.value = '';
+
+            try {
+                const response = await fetch('/send_chat_message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageText })
+                });
+                const data = await response.json();
+                if (data.reply) {
+                    addMessage(data.reply, 'model');
+                } else if (data.error) {
+                    addMessage('Error: ' + data.error, 'model');
+                }
+            } catch (error) {
+                console.error('Error sending chat message:', error);
+                addMessage('Error connecting to agent.', 'model');
+            }
+        }
+
+        chatInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+
+        async function startAgent() {
+            statusArea.textContent = "Attempting to start agent...";
+            try {
+                const response = await fetch('/start_interaction');
+                const data = await response.json();
+                statusArea.textContent = data.status || data.error;
+                addMessage(data.status || data.error, 'model');
+            } catch (error) {
+                 statusArea.textContent = "Error starting agent.";
+                 addMessage('Error starting agent.', 'model');
+            }
+        }
+
+        async function stopAgent() {
+            statusArea.textContent = "Attempting to stop agent...";
+            try {
+                const response = await fetch('/stop_interaction');
+                const data = await response.json();
+                statusArea.textContent = data.status || data.error;
+                addMessage(data.status || data.error, 'model');
+            } catch (error) {
+                 statusArea.textContent = "Error stopping agent.";
+                 addMessage('Error stopping agent.', 'model');
+            }
+        }
+
+        // Function to fetch and display video change notifications from the agent
+        // This is a simple polling mechanism. For real-time, WebSockets would be better.
+        let eventSource = null;
+        function connectToAgentEvents() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            // Use EventSource for Server-Sent Events (SSE)
+            eventSource = new EventSource("/agent_events");
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === "video_change_comment") {
+                    addMessage("Video Event: " + data.comment, "model");
+                } else if (data.type === "status") {
+                     statusArea.textContent = data.message;
+                } else if (data.type === "transcription") {
+                    addMessage("You (transcribed): " + data.text, "user");
+                } else if (data.type === "model_response_audio_text") {
+                    addMessage("Agent: " + data.text, "model");
+                    // Would play audio if we had client-side audio playback for model's speech
+                }
+            };
+
+            eventSource.onerror = function(err) {
+                console.error("EventSource failed:", err);
+                statusArea.textContent = "Disconnected from agent events. Will try to reconnect.";
+                eventSource.close();
+                // Optional: try to reconnect after a delay
+                // setTimeout(connectToAgentEvents, 5000);
+            };
+        }
+
+        // Call connectToAgentEvents when the page loads to start listening for updates
+        window.onload = () => {
+            addMessage("Welcome! Click 'Start Agent' or send a message.", "model");
+            // connectToAgentEvents(); // Start listening for agent events (video changes, etc.)
+            // Delaying this until startAgent is clicked, or automatically if agent is always on.
+            // For now, let's assume agent starts and then events can be subscribed to.
+            // The /agent_events endpoint needs to be robust on the server side.
+        };
+
+
+    </script>
+</body>
+</html>
