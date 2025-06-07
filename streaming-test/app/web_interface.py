@@ -23,74 +23,52 @@ def get_agent():
     global agent_instance
     if agent_instance is None:
         if use_vertex and project_id and location:
-            print(f"Initializing Agent for web interface with project: {project_id}, loc: {location}")
+            print(f"WEB_INTERFACE: Initializing Agent with project: {project_id}, loc: {location}, model: {MODEL_NAME}")
             agent_instance = MultimodalAgent(
                 project_id=project_id,
                 location=location,
-                model_name=MODEL_NAME, # from app.config
-                camera_index=0 # Default camera
+                model_name=MODEL_NAME,
+                camera_index=0
             )
-            # We need a way for the agent to push updates (like video change comments)
-            # One way is to pass a callback or a queue to the agent.
-            # For now, the web routes will call agent methods.
-            # For SSE, the agent could put messages onto agent_event_queue.
         else:
-            print("Web Interface: Agent cannot be initialized. Check .env settings.")
-            # Raise an error or handle gracefully in routes
+            print("WEB_INTERFACE: Agent cannot be initialized. Check .env settings.")
     return agent_instance
 
 # --- Flask App Setup ---
-web_app = Flask(__name__) # Renamed from app to web_app to avoid conflict if 'app' is a module
+web_app = Flask(__name__)
 
 def generate_video_frames():
     local_agent = get_agent()
     if not local_agent or not local_agent.video_monitor:
-        print("Video frames: Agent or video monitor not available.")
-        # Return a placeholder image or error
-        # For now, just yield nothing if not available, or handle error
+        print("WEB_INTERFACE: Video frames - Agent or video monitor not available.")
         return
 
     if not local_agent.video_monitor.cap or not local_agent.video_monitor.cap.isOpened():
+        print("WEB_INTERFACE: Video frames - Camera not started. Attempting to start.")
         if not local_agent.video_monitor.start_capture():
-            print("Video frames: Failed to start camera for web feed.")
-            return # Exit generator if camera fails
+            print("WEB_INTERFACE: Video frames - Failed to start camera for web feed.")
+            return
 
+    print("WEB_INTERFACE: Starting video frame generation for feed.")
     while True:
         if not local_agent.video_monitor.cap or not local_agent.video_monitor.cap.isOpened():
-            print("Video stream: camera became unavailable.")
-            break # Stop if camera is no longer available
+            print("WEB_INTERFACE: Video stream - camera became unavailable.")
+            break
 
         frame = local_agent.video_monitor.get_frame()
         if frame is None:
-            # print("Video stream: failed to get frame.")
-            # Could yield a "no signal" image here
-            time.sleep(0.1) # Avoid busy loop if frames stop
+            time.sleep(0.1)
             continue
 
-        # Encode frame as JPEG
         ret, buffer = local_agent.video_monitor.cv2.imencode('.jpg', frame)
         if not ret:
-            # print("Video stream: failed to encode frame.")
             continue
 
         frame_bytes = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
-        # Check for video changes and send to model (and potentially SSE queue)
-        # This runs video processing in the web request thread for /video_feed
-        # which might not be ideal for performance.
-        # A background thread for the agent's video processing loop is better.
-        # For now, let's call the agent's check method.
-        # Consider that check_for_video_changes_and_comment might call the model, which is slow.
-        # This is a simplified integration.
-
-        # Decouple the model call from the video feed generation
-        # The agent's own loop (if we create one later in main.py) should handle this.
-        # For now, we will NOT call agent.check_for_video_changes_and_comment() here
-        # to keep /video_feed responsive. Video change events should come via SSE from a background process.
-
-        time.sleep(1.0 / local_agent.video_monitor.fps_limit if local_agent.video_monitor.fps_limit else 0.03)
+        time.sleep(1.0 / local_agent.video_monitor.fps_limit if local_agent.video_monitor.fps_limit and local_agent.video_monitor.fps_limit > 0 else 0.03)
 
 
 @web_app.route('/')
@@ -104,33 +82,38 @@ def video_feed():
 
 @web_app.route('/start_interaction', methods=['GET'])
 def start_interaction():
+    print("WEB_INTERFACE: /start_interaction called.")
     local_agent = get_agent()
     if not local_agent:
         return jsonify({"error": "Agent not initialized. Check server logs and .env settings."}), 500
     try:
-        local_agent.start_chat() # This also starts video capture
-        # Add a status message to SSE queue
-        agent_event_queue.put({"type": "status", "message": "Agent started. Video capture active."})
+        local_agent.start_chat()
+        agent_event_queue.put({"type": "status", "message": "Agent interaction started. Video capture active."})
+        print("WEB_INTERFACE: Agent interaction started successfully.")
         return jsonify({"status": "Agent interaction started. Video capture active."})
     except Exception as e:
-        print(f"Error starting agent interaction: {e}")
+        print(f"WEB_INTERFACE: Error starting agent interaction: {e}")
         return jsonify({"error": str(e)}), 500
 
 @web_app.route('/stop_interaction', methods=['GET'])
 def stop_interaction():
+    print("WEB_INTERFACE: /stop_interaction called.")
     local_agent = get_agent()
     if not local_agent:
-        return jsonify({"error": "Agent not initialized."}), 500
+        # This case might be okay if user stops an agent that couldn't init
+        return jsonify({"status": "Agent was not initialized or already stopped."})
     try:
-        local_agent.stop_chat() # This also stops video capture
+        local_agent.stop_chat()
         agent_event_queue.put({"type": "status", "message": "Agent stopped. Video capture released."})
+        print("WEB_INTERFACE: Agent interaction stopped successfully.")
         return jsonify({"status": "Agent interaction stopped."})
     except Exception as e:
-        print(f"Error stopping agent interaction: {e}")
+        print(f"WEB_INTERFACE: Error stopping agent interaction: {e}")
         return jsonify({"error": str(e)}), 500
 
 @web_app.route('/send_chat_message', methods=['POST'])
 def send_chat_message():
+    print("WEB_INTERFACE: /send_chat_message called.")
     data = request.get_json()
     user_message = data.get('message')
     if not user_message:
@@ -140,97 +123,62 @@ def send_chat_message():
     if not local_agent:
         return jsonify({"error": "Agent not available."}), 503
 
-    if not local_agent.chat: # Ensure chat is started
+    if not local_agent.chat:
+        print("WEB_INTERFACE: Chat not active in send_chat_message, starting chat...")
         local_agent.start_chat()
 
     try:
-        # For now, web chat sends text, gets text. Voice interaction is separate.
         model_reply = local_agent.send_text_message(user_message)
-        # Put user message and model reply onto the event queue for SSE clients too if desired
-        # agent_event_queue.put({"type": "user_message_web", "text": user_message})
-        # agent_event_queue.put({"type": "model_response_web", "text": model_reply})
         return jsonify({"reply": model_reply})
     except Exception as e:
-        print(f"Error processing chat message: {e}")
+        print(f"WEB_INTERFACE: Error processing chat message: {e}")
         return jsonify({"error": str(e)}), 500
 
-# Server-Sent Events endpoint
+@web_app.route('/send_voice_message', methods=['POST'])
+def send_voice_message():
+    print("WEB_INTERFACE: /send_voice_message called.")
+    local_agent = get_agent()
+    if not local_agent:
+        return jsonify({"error": "Agent not available."}), 503
+
+    if not local_agent.chat:
+        print("WEB_INTERFACE: Chat not active in send_voice_message, starting chat...")
+        local_agent.start_chat()
+
+    print("WEB_INTERFACE: Calling agent.handle_voice_interaction...")
+    try:
+        # The agent's handle_voice_interaction method is blocking.
+        # Results (transcription, model text) are pushed to SSE queue from within the agent method.
+        local_agent.handle_voice_interaction(record_duration_seconds=5, event_queue=agent_event_queue)
+        print("WEB_INTERFACE: agent.handle_voice_interaction completed.")
+        return jsonify({"status": "Voice interaction processed. Check chat for updates via SSE."})
+    except Exception as e:
+        print(f"WEB_INTERFACE: Error during voice interaction: {e}")
+        return jsonify({"error": str(e)}), 500
+
 def generate_agent_events():
-    # This function will yield messages from the agent_event_queue
-    # The agent's background tasks (audio processing, video change detection)
-    # should put messages (dict or JSON string) into this queue.
-    print("SSE client connected. Streaming events...")
+    print("WEB_INTERFACE: SSE client connected. Starting event stream.")
     try:
         while True:
-            message = agent_event_queue.get() # Blocking call
-            # print(f"SSE: Sending event: {message}") # For debugging
+            message = agent_event_queue.get()
+            # print(f"WEB_INTERFACE SSE: Sending event: {message}") # Can be noisy
             yield f"data: {json.dumps(message)}\n\n"
-            agent_event_queue.task_done() # Mark task as done
-            time.sleep(0.1) # Short delay to allow multiple messages to batch if rapidly produced
+            agent_event_queue.task_done()
+            time.sleep(0.01) # Prevent busy loop if queue is rapidly filled
     except GeneratorExit:
-        print("SSE client disconnected.")
+        print("WEB_INTERFACE: SSE client disconnected.")
     except Exception as e:
-        print(f"Error in SSE event generator: {e}")
+        print(f"WEB_INTERFACE: Error in SSE event generator: {e}")
 
 
 @web_app.route('/agent_events')
 def agent_events():
     return Response(stream_with_context(generate_agent_events()), mimetype="text/event-stream")
 
-
-# The main execution block for running Flask app directly from this file
-# This will be superseded by run.py or main.py starting the web server.
 if __name__ == '__main__':
     print("Starting Flask web server directly from web_interface.py (for testing)...")
     print(f"Agent use_vertex: {use_vertex}, project: {project_id}, location: {location}")
     if not (use_vertex and project_id and location):
         print("WARNING: Agent will not be fully functional due to missing .env vars.")
 
-    # Example of how agent's background task could put messages to queue:
-    # This needs to be run in a separate thread in a real app.
-    def dummy_agent_activity_simulator():
-        count = 0
-        ag = get_agent() # Ensure agent is initialized
-        if ag and not ag.chat : ag.start_chat() # Start agent if not already
-
-        while True:
-            time.sleep(5)
-            # Simulate a video change event
-            if ag and ag.video_monitor and ag.video_monitor.cap and ag.video_monitor.cap.isOpened():
-                 changed, desc, frame_bytes = ag.video_monitor.process_frame_for_changes()
-                 if changed and frame_bytes:
-                     print(f"Background check: Video change detected: {desc}")
-                     # In a real scenario, the agent's own method would call the model
-                     # and then put the model's comment on the queue.
-                     # For now, just put the description.
-                     # This call to process_frame_for_changes might be redundant if /video_feed is active
-                     # and also calling it. A proper background thread is needed.
-                     # For now, this is just a conceptual test for SSE.
-
-                     # Simplified: Let's assume agent.check_for_video_changes_and_comment()
-                     # is modified to put its findings on the queue.
-                     # For this test, we'll manually put a message.
-                     comment_from_model = f"Model observes: {desc} (event {count})"
-                     agent_event_queue.put({
-                         "type": "video_change_comment",
-                         "comment": comment_from_model,
-                         # "image_url": "/last_detected_change.jpg" # If we save the image
-                     })
-                     print(f"SSE Queue: Put video change: {comment_from_model}")
-
-            count += 1
-            # Simulate a transcription event (if agent was handling voice)
-            # agent_event_queue.put({"type": "transcription", "text": f"User said something {count}"})
-            # Simulate model audio response text
-            # agent_event_queue.put({"type": "model_response_audio_text", "text": f"Agent replied something {count}"})
-
-
-    # import threading
-    # simulator_thread = threading.Thread(target=dummy_agent_activity_simulator, daemon=True)
-    # simulator_thread.start()
-    # print("Dummy agent activity simulator thread started for SSE testing.")
-
     web_app.run(host=WEB_HOST, port=WEB_PORT, debug=True, threaded=True, use_reloader=False)
-    # use_reloader=False because it can cause issues with global state like agent_instance
-    # and background threads. For development, one might enable it but be wary of agent re-initialization.
-    # threaded=True is important for handling multiple requests like /video_feed and /agent_events concurrently.

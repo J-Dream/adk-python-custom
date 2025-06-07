@@ -14,7 +14,7 @@
         .model-message { background-color: #f0f4c3; }
         .controls { display: flex; justify-content: center; align-items: center; width: 80%; max-width: 600px; }
         #chatInput { flex-grow: 1; padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;}
-        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; background-color: #4CAF50; color: white; }
+        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; background-color: #4CAF50; color: white; margin-left: 5px; } /* Added margin-left to button */
         button:hover { background-color: #45a049; }
         .status { margin-top: 10px; font-style: italic; color: #555; }
     </style>
@@ -34,6 +34,7 @@
             <div class="controls">
                 <input type="text" id="chatInput" placeholder="Type your message...">
                 <button onclick="sendChatMessage()">Send</button>
+                <button onclick="sendVoiceMessage()" id="sendVoiceBtn">Send Voice (Record 5s)</button>
             </div>
             <div class="status" id="statusArea">Agent status will appear here.</div>
         </div>
@@ -92,6 +93,10 @@
                 const data = await response.json();
                 statusArea.textContent = data.status || data.error;
                 addMessage(data.status || data.error, 'model');
+                // Connect to SSE after agent is confirmed started
+                if (response.ok && data.status && data.status.includes("started")) {
+                    connectToAgentEvents();
+                }
             } catch (error) {
                  statusArea.textContent = "Error starting agent.";
                  addMessage('Error starting agent.', 'model');
@@ -105,21 +110,54 @@
                 const data = await response.json();
                 statusArea.textContent = data.status || data.error;
                 addMessage(data.status || data.error, 'model');
+                if (eventSource) {
+                    eventSource.close();
+                    statusArea.textContent = "Agent stopped. Event stream closed.";
+                }
             } catch (error) {
                  statusArea.textContent = "Error stopping agent.";
                  addMessage('Error stopping agent.', 'model');
             }
         }
 
+        async function sendVoiceMessage() {
+            const sendVoiceButton = document.getElementById("sendVoiceBtn");
+            addMessage("🎤 Recording for 5s... Please speak.", "user");
+            statusArea.textContent = "Recording audio...";
+            sendVoiceButton.disabled = true;
+
+            try {
+                const response = await fetch("/send_voice_message", { method: "POST" });
+                const data = await response.json();
+                if (data.status) {
+                    statusArea.textContent = data.status;
+                    // Messages (transcription, model reply) should come via SSE
+                } else if (data.error) {
+                    addMessage("Voice Error: " + data.error, "model");
+                    statusArea.textContent = "Voice error: " + data.error;
+                }
+            } catch (error) {
+                console.error("Error sending voice message:", error);
+                addMessage("Error processing voice input.", "model");
+                statusArea.textContent = "Error processing voice input.";
+            } finally {
+                sendVoiceButton.disabled = false;
+            }
+        }
+
         // Function to fetch and display video change notifications from the agent
-        // This is a simple polling mechanism. For real-time, WebSockets would be better.
         let eventSource = null;
         function connectToAgentEvents() {
             if (eventSource) {
                 eventSource.close();
             }
-            // Use EventSource for Server-Sent Events (SSE)
+            statusArea.textContent = "Connecting to agent events...";
             eventSource = new EventSource("/agent_events");
+
+            eventSource.onopen = function() {
+                statusArea.textContent = "Connected to agent events.";
+                addMessage("Connected to agent for live updates.", "model");
+            };
 
             eventSource.onmessage = function(event) {
                 const data = JSON.parse(event.data);
@@ -131,28 +169,22 @@
                     addMessage("You (transcribed): " + data.text, "user");
                 } else if (data.type === "model_response_audio_text") {
                     addMessage("Agent: " + data.text, "model");
-                    // Would play audio if we had client-side audio playback for model's speech
                 }
             };
 
             eventSource.onerror = function(err) {
                 console.error("EventSource failed:", err);
-                statusArea.textContent = "Disconnected from agent events. Will try to reconnect.";
-                eventSource.close();
-                // Optional: try to reconnect after a delay
-                // setTimeout(connectToAgentEvents, 5000);
+                statusArea.textContent = "Disconnected from agent events.";
+                addMessage("Lost connection to agent live updates.", "model");
+                if (eventSource) eventSource.close();
             };
         }
 
-        // Call connectToAgentEvents when the page loads to start listening for updates
         window.onload = () => {
-            addMessage("Welcome! Click 'Start Agent' or send a message.", "model");
-            // connectToAgentEvents(); // Start listening for agent events (video changes, etc.)
-            // Delaying this until startAgent is clicked, or automatically if agent is always on.
-            // For now, let's assume agent starts and then events can be subscribed to.
-            // The /agent_events endpoint needs to be robust on the server side.
+            addMessage("Welcome! Click 'Start Agent' to begin.", "model");
+            // Do not automatically connectToAgentEvents here.
+            // connectToAgentEvents will be called by startAgent().
         };
-
 
     </script>
 </body>
