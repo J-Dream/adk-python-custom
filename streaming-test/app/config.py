@@ -3,7 +3,8 @@
 # Vertex AI / Gemini Model Configuration
 GOOGLE_CLOUD_PROJECT = None # Will be loaded from .env
 GOOGLE_CLOUD_LOCATION = None # Will be loaded from .env
-MODEL_NAME = "gemini-2.0-flash-live-preview-04-09" # Specified model
+MODEL_NAME = "gemini-2.0-flash" #"gemini-2.0-flash-live-preview-04-09" # Specified model   
+#model was changed to gemini-2.0-flash because: Error in background video check: 400 gemini-2.0-flash-live-preview-04-09 is not supported in the generateContent API.
 
 # Audio settings
 AUDIO_SAMPLE_RATE = 16000
