@@ -73,7 +73,18 @@ async function startMic() {
     try {
         micStream = await navigator.mediaDevices.getUserMedia({audio:{sampleRate:16000, channelCount:1}}); // Recorder rate
         if(!pcmRecorder) pcmRecorder = new AudioWorkletNode(audioCtx, 'pcm-recorder-processor');
-        pcmRecorder.port.onmessage = (evt) => { if(evt.data instanceof ArrayBuffer && evt.data.byteLength>0) sendAudio(evt.data);};
+
+        // Corrected order to handle Float32Array from worklet
+        pcmRecorder.port.onmessage = (evt) => { // evt.data is Float32Array
+            if(evt.data instanceof Float32Array && evt.data.length > 0) {
+                // Convert Float32Array to Int16Array
+                const float32Array = evt.data;
+                const int16Array = new Int16Array(float32Array.length);
+                for (let i = 0; i < float32Array.length; i++){let s = Math.max(-1, Math.min(1, float32Array[i])); int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; }
+                // Send the ArrayBuffer of the Int16Array
+                sendAudio(int16Array.buffer);
+            }
+        };
         const srcNode = audioCtx.createMediaStreamSource(micStream);
         srcNode.connect(pcmRecorder); // DO NOT connect pcmRecorder to audioCtx.destination
         console.log("Mic access OK, recording."); audStatus.textContent="Recording..."; startBtn.disabled=true; stopBtn.disabled=false; textIn.disabled=false; sendBtn.disabled=false;
