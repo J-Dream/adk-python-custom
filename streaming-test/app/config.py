@@ -10,6 +10,8 @@ AUDIO_SAMPLE_RATE = 16000
 AUDIO_CHANNELS = 1
 # Add other audio settings as needed (e.g., chunk size for streaming)
 
+MODEL_NAME = "gemini-2.0-flash"
+
 # Video settings
 VIDEO_FPS = 10 # Default FPS for video processing by VideoMonitor
 # Add other video settings as needed
