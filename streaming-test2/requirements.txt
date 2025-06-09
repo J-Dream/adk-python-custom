@@ -10,3 +10,4 @@ numpy
 # Add any other specific versions or packages if known e.g. google-adk
 google-adk==1.0.0
 certifi # Often needed for SSL with ADK
+deprecated
