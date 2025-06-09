@@ -108,7 +108,7 @@ class VideoMonitor:
 
         # Read a frame from the camera.
         #   - `ret`: A boolean indicating if the frame was read successfully.
-        #   - `frame`: The captured frame (a numpy array).
+        #   - `frame`: The captured frame (a np.ndarray array).
         ret, frame = self.cap.read()
 
         # If the frame was not received successfully (e.g., end of a video file).
@@ -211,7 +211,7 @@ class VideoMonitor:
         if self.fps_limit and (current_time - self.last_processed_time) < (1.0 / self.fps_limit):
             # If the time since the last processed frame is less than the desired frame
             # interval (calculated from fps_limit), then skip processing this frame.
-            time.sleep(0.01) # Add a small sleep to prevent a busy-loop if the camera is much
+            time.sleep(0.01)  # Add a small sleep to prevent a busy-loop if the camera is much
                              # faster than the fps_limit, or if the camera capture itself is non-blocking.
             return False, "FPS limit, frame skipped", None
 
@@ -251,9 +251,11 @@ class VideoMonitor:
     #             return True, change_description, None
     #     return False, "No persons detected.", None
 
-# if __name__ == '__main__':
+# This block allows the script to be run directly for testing.
+def main_test():
     print("Testing video_utils.py...")
     # This test requires a camera. If no camera, it will try to proceed but fail gracefully.
+    # The VideoMonitor class is defined in the same file, so it's in scope here.
     monitor = VideoMonitor(camera_index=0, fps_limit=1) # Limit to 1 FPS for this test
 
     if not monitor.start_capture():
@@ -276,7 +278,7 @@ class VideoMonitor:
                 elif description == "Failed to get frame":
                     print("Stopping test due to frame capture failure.")
                     break
-                elif description != "FPS limit, frame skipped": # Don't print too many "skipped" messages
+                elif description != "FPS limit, frame skipped": # Don't print "FPS limit" too often, but other status messages
                     print(f'Status: {description} (Frame: {frames_processed})')
 
                 frames_processed +=1
@@ -288,3 +290,15 @@ class VideoMonitor:
         finally:
             monitor.stop_capture()
             print("Video utils testing finished.")
+
+# The `if __name__ == '__main__':` block ensures that `main_test()` is called only when the script is executed directly,
+# not when it's imported as a module. This is a standard Python practice.
+# By the time the `if __name__ == '__main__':` block is executed,
+# the class definition has already been processed and the class name is in the module global scope.
+# The original error (NameErro) often occurs in more complex scenarios like circular imports
+# or if the runnable block tries to access the class in a way that depends on import-at time side-effects
+# that aren't complete when the `if __name__ == '__main__':` check happens.
+# Wrapping it in a function is a good practice for cleanliness and to avoid potential scoping issues,
+# especially with tools like Uvicorn's reloader that might import modules in specific ways.
+if __name__ == '__main__':
+    main_test()

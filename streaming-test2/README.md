@@ -36,10 +36,11 @@ This project (`streaming-test2`) demonstrates a multimodal agent system using Py
      ```
 
 2. *__Install Dependencies__*
-   With your virtual environment active, navigate to the root directory of this repository and run the following command to install the required packages:
+   With your virtual environment active, navigate to the `streaming-test2` directory and run the following command to install the required packages:
    ```sh
-   pip install -r streaming-test2/requirements.txt
+   pip install -r requirements.txt
    ```
+   (Ensure you are in the `streaming-test2` directory when running this command, as requirements.txt is located there.)
 
 3. *__Create the `.env` File__*
    Create a file named `.env` within the `streaming-test2` directory.
@@ -51,15 +52,18 @@ This project (`streaming-test2`) demonstrates a multimodal agent system using Py
    Note: The Python scripts in the `app/` directory are configured to load this particular `.env` file from the `streaming-test2` directory.
 
 4. *__Run the Application__*
-   From the root directory of the repository (the directory that contains the `streaming-test2` folder), run the following command to start the FastAPI application using Uvicorn:
+   Navigate into the `streaming-test2` directory in your terminal.
    ```sh
-   python -m uvicorn streaming-test2.app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir .
+   cd path/to/streaming-test2
    ```
-   - `app-dir .` instructs Uvicorn to look for the application in the current directory (`.`).
-   - `streaming-test2.app.main:app` tells Uvicorn to lookfrom the `streaming-test2` directory, then the `app` folder, the `main` module (main.py), and the `app` object within that module.
+   Then, run the following command to start the FastAPI application using Uvicorn:
+   ```sh
+   python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+   - `app.main:app` tells Uvicorn to look for the `app` folder, the `main` module (main.py), and the `app` object within that module. This assumes you are running from the `streaming-test2` directory.
    - `--reload` enables automatic reloading when code changes are detected.
    - `--host 0.0.0.0` makes the server accessible on your network.
-   - `--port 8000` sets the port the server runs on.
+   - `--port 8000` sets the port the server is running on.
 
 Once the server is running, open your web browser and navigate to `http://localhost:8000`.
 
@@ -68,7 +72,7 @@ Once the server is running, open your web browser and navigate to `http://localh
 
 1. The UI will display statuses for the Camera Agent and the Audio Agent.
 2. The Camera Agent will automatically start monitoring.
-   - Its logs will appear in the 'Camera Log' section.
+   - Its rager will appear in the 'Camera Log' section.
 3. To interact with the AudioAgent:
    - Click the `Start Audio Interaction` button.
    - Your server permission to use the microphone.

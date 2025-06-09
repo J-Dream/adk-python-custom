@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI):
         if camera_agent_instance: # Should be None if critical env vars were missing
             print("MAIN_APP: Stopping CameraAgent...")
             camera_agent_instance.stop()
-        return #use return instead of exception for normal startup logic
+        return #Use return instead of exception for normal startup logic
 
     # Initialize agents here
     try:
@@ -103,7 +103,7 @@ app.add_middleware(
 
 # Define paths for static files and log files.
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static") # Corrected: STATIC_DIR
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 LOGS_DIR = Path(__file__).resolve().parent.parent / "logs"
 
 # --- HTML Page Endpoint ---
@@ -196,5 +196,5 @@ async def get_camera_agent_status():
 
 # --- Run the Application (for local development) ---
 if __name__ == "__main__":
-    print("MAIN_APP: To run this app, use Uvicorn from the command line. Example:")
-    print("uvicorn streaming-test2.app.main:app --reload --port 8000 --host 0.0.0.0 --app-dir .   (from the repository root)")
+    print("MAIN_APP: To run this app, navigate to the `streaming-test2` directory and use Uvicorn. Example:") # Corrected comment
+    print("python -m uvicorn app.main:app --reload --port 8000 --host 0.0.0.0  (from inside streaming-test2)") # Corrected command
