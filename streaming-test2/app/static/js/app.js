@@ -1,6 +1,7 @@
 // DOM Elements
 const camStatus = document.getElementById('cameraAgentStatus');
 const camLog = document.getElementById('cameraLogOutput');
+const cameraLiveImageEl = document.getElementById('cameraLiveImage'); // New element for the image
 const audStatus = document.getElementById('audioAgentStatus');
 const audLog = document.getElementById('audioLogOutput');
 const startBtn = document.getElementById('startAudioButton');
@@ -34,12 +35,35 @@ async function fetchLog(type, el) {
         const res = await fetch(`/logs/${type}`);
         if(!res.ok) { el.textContent = `Error: ${res.statusText}`; return; }
         const logs = await res.json();
-        if(logs.error) el.textContent = `Error in log data: ${logs.error}`;
-        else if(Array.isArray(logs)) el.textContent = logs.map(l => `[${l.timestamp || ''}] ${l.speaker || l.type || ''}: ${l.text || l.comment_by_llm || l.description_by_cv || ''}`).join('\n');
-        else el.textContent = "Bad log format.";
+        if(logs.error) { el.textContent = `Error in log data: ${logs.error}`;
+        } else if(Array.isArray(logs)) {
+            if (type === 'camera') {
+                el.textContent = logs.map(l => {
+                    let logString = `[${l.timestamp || ''}] CV: ${l.description_by_cv || ''}\tLLM: ${l.comment_by_llm || ''}`;
+                    // Check if llm_processing_time_ms exists and is a number
+                    if (typeof l.llm_processing_time_ms === 'number') {
+                        logString += ` (LLM Time: ${l.llm_processing_time_ms.toFixed(2)}ms) `;
+                    }
+                    return logString;
+                }).join('\n\n'); // Add extra newline for readability between camera log entries
+            } else { // For 'audio' or other types
+                el.textContent = logs.map(l => `[${l.timestamp || ''}] ${l.speaker || l.type || ''}: ${l.text || ''}`).join('\n');
+            }
+        } else {
+            el.textContent = "Bad log format.";
+        }
     } catch (e) { el.textContent = `Failed to fetch ${type} log: ${e}`; }
 }
+
 async function fetchCamStatus() { try { const r = await fetch('/agent/camera/status'); const d = await r.json(); camStatus.textContent = `Status: ${d.status}${d.monitoring?' (Monitoring)':''}`; } catch (e) { camStatus.textContent = "Status: Error"; }}
+
+// New function to update the camera image
+async function updateCameraImage() {
+    if (cameraLiveImageEl) {
+        // Use a cache-busting query parameter by appending the current timestamp
+        cameraLiveImageEl.src = `/static/latest_camera_image.jpg?timestamp=${Date.now()}`;
+    }
+}
 
 // --- SSEConnection for Audio Agent ---
 function connectSSE() {
@@ -175,10 +199,7 @@ textIn.addEventListener('keypress', (e) => {
 function init() {
     console.log("App init, session:", sessId);
     fetchLog('camera',camLog); fetchLog('audio',audLog); fetchCamStatus();
-    setInterval(()=>{ fetchLog('camera',camLog); fetchLog('audio',audLog); fetchCamStatus(); }, 5000);
-    // Don't automatically setup audio or connect SSE on load.
-    // User needs to click 'Start Audio Interaction'
-    // setupAudio();
+    setInterval(()=>{ fetchLog('camera',camLog); fetchLog('audio',audLog); fetchCamStatus(); updateCameraImage(); }, 5000); // Update image also.
     audStatus.textContent = "Status: Idle";
 }
 init();
