@@ -36,6 +36,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from google_search_agent.agent import root_agent
+#from greeting_agent.agent import root_agent
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
@@ -47,7 +48,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 load_dotenv()
 
 APP_NAME = "ADK Streaming example"
-USER_ID = "user1"  # Replace with actual user ID
 
 
 async def start_agent_session(user_id, is_audio=False):
@@ -62,7 +62,7 @@ async def start_agent_session(user_id, is_audio=False):
     # Create a Session
     session = await runner.session_service.create_session(
         app_name=APP_NAME,
-        user_id=USER_ID,  # user_id=user_id,  # Replace with actual user ID
+        user_id=user_id,  # Replace with actual user ID
     )
 
     # Set response modality

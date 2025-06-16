@@ -97,9 +97,16 @@ Now it's ready to try the agent. Run the following command to launch the dev UI.
 
 cd app
 Also, set SSL_CERT_FILE variable with the following command. This is required for the voice and video tests later.
+Set SSL_CERT_FILE variable with the following command.     this is required to be set everytime you start a new terminal
+
+    in powershell:   $env:SSL_CERT_FILE = (python -m certifi)
+Custom: ALternately you can add this to .venv\Scripts\Activate.ps1 at end of file  
+      # CUSTOM ADDITON: Automatically set the SSL_CERT_FILE path using the certifi package
+      # to prevent potential SSL verification errors with Google Cloud APIs.
+      $env:SSL_CERT_FILE = $(python -m certifi)
+  When you activate the .venv this will run
 
 
-export SSL_CERT_FILE=$(python -m certifi)
 Then, run the dev UI:
 
 

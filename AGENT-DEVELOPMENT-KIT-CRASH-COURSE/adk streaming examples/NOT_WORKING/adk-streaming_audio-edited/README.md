@@ -28,6 +28,7 @@ Install ADK:
 
 
 pip install google-adk==1.0.0
+Set SSL_CERT_FILE variable with the following command.
 Set SSL_CERT_FILE variable with the following command.     this is required everytime you start a new terminal
 
     in powershell:   $env:SSL_CERT_FILE = (python -m certifi)
@@ -36,7 +37,6 @@ Custom: ALternately you can add this to .venv\Scripts\Activate.ps1 at end of fil
       # to prevent potential SSL verification errors with Google Cloud APIs.
       $env:SSL_CERT_FILE = $(python -m certifi)
   When you activate the .venv this will run
-
 
 
 Download the sample code:

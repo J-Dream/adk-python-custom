@@ -1,7 +1,7 @@
 from google.adk.agents import Agent
 
 root_agent = Agent(
-    name="google_search_agent",  #google_search_agent  
+    name="google_search_agent",    #greeting_agent",  #google_search_agent  
     # https://ai.google.dev/gemini-api/docs/models
     model= "gemini-2.0-flash-live-preview-04-09",  #"gemini-2.0-flash-exp", 
     description="Greeting agent",
