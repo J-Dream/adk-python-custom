@@ -55,7 +55,7 @@ COPY "agents/{app_name}/" "/app/agents/{app_name}/"
 
 EXPOSE {port}
 
-CMD adk {command} --port={port} {host_option} {service_option} {trace_to_cloud_option} "/app/agents"
+CMD adk {command} --port={port} {host_option} {service_option} {trace_to_cloud_option} {allow_origins_option} {a2a_option}"/app/agents"
 """
 
 _AGENT_ENGINE_APP_TEMPLATE = """
@@ -121,11 +121,14 @@ def to_cloud_run(
     port: int,
     trace_to_cloud: bool,
     with_ui: bool,
+    log_level: str,
     verbosity: str,
     adk_version: str,
+    allow_origins: Optional[list[str]] = None,
     session_service_uri: Optional[str] = None,
     artifact_service_uri: Optional[str] = None,
     memory_service_uri: Optional[str] = None,
+    a2a: bool = False,
 ):
   """Deploys an agent to Google Cloud Run.
 
@@ -150,6 +153,7 @@ def to_cloud_run(
     app_name: The name of the app, by default, it's basename of `agent_folder`.
     temp_folder: The temp folder for the generated Cloud Run source files.
     port: The port of the ADK api server.
+    allow_origins: The list of allowed origins for the ADK api server.
     trace_to_cloud: Whether to enable Cloud Trace.
     with_ui: Whether to deploy with UI.
     verbosity: The verbosity level of the CLI.
@@ -183,6 +187,10 @@ def to_cloud_run(
     # create Dockerfile
     click.echo('Creating Dockerfile...')
     host_option = '--host=0.0.0.0' if adk_version > '0.5.0' else ''
+    allow_origins_option = (
+        f'--allow_origins={",".join(allow_origins)}' if allow_origins else ''
+    )
+    a2a_option = '--a2a' if a2a else ''
     dockerfile_content = _DOCKERFILE_TEMPLATE.format(
         gcp_project_id=project,
         gcp_region=region,
@@ -197,8 +205,10 @@ def to_cloud_run(
             memory_service_uri,
         ),
         trace_to_cloud_option='--trace_to_cloud' if trace_to_cloud else '',
+        allow_origins_option=allow_origins_option,
         adk_version=adk_version,
         host_option=host_option,
+        a2a_option=a2a_option,
     )
     dockerfile_path = os.path.join(temp_folder, 'Dockerfile')
     os.makedirs(temp_folder, exist_ok=True)
@@ -226,7 +236,7 @@ def to_cloud_run(
             '--port',
             str(port),
             '--verbosity',
-            verbosity,
+            log_level.lower() if log_level else verbosity,
             '--labels',
             'created-by=adk',
         ],

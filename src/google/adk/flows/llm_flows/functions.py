@@ -288,8 +288,7 @@ async def handle_function_calls_live(
       trace_tool_call(
           tool=tool,
           args=function_args,
-          response_event_id=function_response_event.id,
-          function_response=function_response,
+          function_response_event=function_response_event,
       )
       function_response_events.append(function_response_event)
 
@@ -520,3 +519,35 @@ def merge_parallel_function_response_events(
   # Use the base_event as the timestamp
   merged_event.timestamp = base_event.timestamp
   return merged_event
+
+
+def find_matching_function_call(
+    events: list[Event],
+) -> Optional[Event]:
+  """Finds the function call event that matches the function response id of the last event."""
+  if not events:
+    return None
+
+  last_event = events[-1]
+  if (
+      last_event.content
+      and last_event.content.parts
+      and any(part.function_response for part in last_event.content.parts)
+  ):
+
+    function_call_id = next(
+        part.function_response.id
+        for part in last_event.content.parts
+        if part.function_response
+    )
+    for i in range(len(events) - 2, -1, -1):
+      event = events[i]
+      # looking for the system long running request euc function call
+      function_calls = event.get_function_calls()
+      if not function_calls:
+        continue
+
+      for function_call in function_calls:
+        if function_call.id == function_call_id:
+          return event
+  return None

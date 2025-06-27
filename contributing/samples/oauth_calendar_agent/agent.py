@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from datetime import datetime
-import json
 import os
 
 from dotenv import load_dotenv
@@ -27,10 +26,8 @@ from google.adk.auth import AuthCredential
 from google.adk.auth import AuthCredentialTypes
 from google.adk.auth import OAuth2Auth
 from google.adk.tools import ToolContext
-from google.adk.tools.authenticated_tool.base_authenticated_tool import AuthenticatedFunctionTool
-from google.adk.tools.authenticated_tool.credentials_store import ToolContextCredentialsStore
+from google.adk.tools.authenticated_function_tool import AuthenticatedFunctionTool
 from google.adk.tools.google_api_tool import CalendarToolset
-from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
@@ -150,11 +147,7 @@ root_agent = Agent(
                             ),
                             tokenUrl="https://oauth2.googleapis.com/token",
                             scopes={
-                                "https://www.googleapis.com/auth/calendar": (
-                                    "See, edit, share, and permanently delete"
-                                    " all the calendars you can access using"
-                                    " Google Calendar"
-                                )
+                                "https://www.googleapis.com/auth/calendar": "",
                             },
                         )
                     )
@@ -167,7 +160,6 @@ root_agent = Agent(
                     ),
                 ),
             ),
-            credential_store=ToolContextCredentialsStore(),
         ),
         calendar_toolset,
     ],

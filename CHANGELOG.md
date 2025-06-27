@@ -1,5 +1,84 @@
 # Changelog
 
+## [1.5.0](https://github.com/google/adk-python/compare/v1.4.2...v1.5.0) (2025-06-25)
+
+
+### Features
+
+* Add a new option `eval_storage_uri` in adk web & adk eval to specify GCS bucket to store eval data ([fa025d7](https://github.com/google/adk-python/commit/fa025d755978e1506fa0da1fecc49775bebc1045))
+* Add ADK examples for litellm with add_function_to_prompt ([f33e090](https://github.com/google/adk-python/commit/f33e0903b21b752168db3006dd034d7d43f7e84d))
+* Add implementation of VertexAiMemoryBankService and support in FastAPI endpoint ([abc89d2](https://github.com/google/adk-python/commit/abc89d2c811ba00805f81b27a3a07d56bdf55a0b))
+* Add rouge_score library to ADK eval dependencies, and implement RougeEvaluator that is computes ROUGE-1 for "response_match_score" metric ([9597a44](https://github.com/google/adk-python/commit/9597a446fdec63ad9e4c2692d6966b14f80ff8e2))
+* Add usage span attributes to telemetry ([#356](https://github.com/google/adk-python/issues/356)) ([ea69c90](https://github.com/google/adk-python/commit/ea69c9093a16489afdf72657136c96f61c69cafd))
+* Add Vertex Express mode compatibility for VertexAiSessionService ([00cc8cd](https://github.com/google/adk-python/commit/00cc8cd6433fc45ecfc2dbaa04dbbc1a81213b4d))
+
+
+### Bug Fixes
+
+* Include current turn context when include_contents='none' ([9e473e0](https://github.com/google/adk-python/commit/9e473e0abdded24e710fd857782356c15d04b515))
+* Make LiteLLM streaming truly asynchronous ([bd67e84](https://github.com/google/adk-python/commit/bd67e8480f6e8b4b0f8c22b94f15a8cda1336339))
+* Make raw_auth_credential and exchanged_auth_credential optional given their default value is None ([acbdca0](https://github.com/google/adk-python/commit/acbdca0d8400e292ba5525931175e0d6feab15f1))
+* Minor typo fix in the agent instruction ([ef3c745](https://github.com/google/adk-python/commit/ef3c745d655538ebd1ed735671be615f842341a8))
+* Typo fix in sample agent instruction ([ef3c745](https://github.com/google/adk-python/commit/ef3c745d655538ebd1ed735671be615f842341a8))
+* Update contributing links ([a1e1441](https://github.com/google/adk-python/commit/a1e14411159fd9f3e114e15b39b4949d0fd6ecb1))
+* Use starred tuple unpacking on GCS artifact blob names ([3b1d9a8](https://github.com/google/adk-python/commit/3b1d9a8a3e631ca2d86d30f09640497f1728986c))
+
+
+### Chore
+
+* Do not send api request when session does not have events ([88a4402](https://github.com/google/adk-python/commit/88a4402d142672171d0a8ceae74671f47fa14289))
+* Leverage official uv action for install([09f1269](https://github.com/google/adk-python/commit/09f1269bf7fa46ab4b9324e7f92b4f70ffc923e5))
+* Update google-genai package and related deps to latest([ed7a21e](https://github.com/google/adk-python/commit/ed7a21e1890466fcdf04f7025775305dc71f603d))
+* Add credential service backed by session state([29cd183](https://github.com/google/adk-python/commit/29cd183aa1b47dc4f5d8afe22f410f8546634abc))
+* Clarify the behavior of Event.invocation_id([f033e40](https://github.com/google/adk-python/commit/f033e405c10ff8d86550d1419a9d63c0099182f9))
+* Send user message to the agent that returned a corresponding function call if user message is a function response([7c670f6](https://github.com/google/adk-python/commit/7c670f638bc17374ceb08740bdd057e55c9c2e12))
+* Add request converter to convert a2a request to ADK request([fb13963](https://github.com/google/adk-python/commit/fb13963deda0ff0650ac27771711ea0411474bf5))
+* Support allow_origins in cloud_run deployment ([2fd8feb](https://github.com/google/adk-python/commit/2fd8feb65d6ae59732fb3ec0652d5650f47132cc))
+
+## [1.4.2](https://github.com/google/adk-python/compare/v1.4.1...v1.4.2) (2025-06-20)
+
+
+### Bug Fixes
+
+* Add type checking to handle different response type of genai API client ([4d72d31](https://github.com/google/adk-python/commit/4d72d31b13f352245baa72b78502206dcbe25406))
+  * This fixes the broken VertexAiSessionService
+* Allow more credentials types for BigQuery tools ([2f716ad](https://github.com/google/adk-python/commit/2f716ada7fbcf8e03ff5ae16ce26a80ca6fd7bf6))
+
+## [1.4.1](https://github.com/google/adk-python/compare/v1.3.0...v1.4.1) (2025-06-18)
+
+
+### Features
+
+* Add Authenticated Tool (Experimental) ([dcea776](https://github.com/google/adk-python/commit/dcea7767c67c7edfb694304df32dca10b74c9a71))
+* Add enable_affective_dialog and proactivity to run_config and llm_request ([fe1d5aa](https://github.com/google/adk-python/commit/fe1d5aa439cc56b89d248a52556c0a9b4cbd15e4))
+* Add import session API in the fast API ([233fd20](https://github.com/google/adk-python/commit/233fd2024346abd7f89a16c444de0cf26da5c1a1))
+* Add integration tests for litellm with and without turning on add_function_to_prompt ([8e28587](https://github.com/google/adk-python/commit/8e285874da7f5188ea228eb4d7262dbb33b1ae6f))
+* Allow data_store_specs pass into ADK VAIS built-in tool ([675faef](https://github.com/google/adk-python/commit/675faefc670b5cd41991939fe0fc604df331111a))
+* Enable MCP Tool Auth (Experimental) ([157d9be](https://github.com/google/adk-python/commit/157d9be88d92f22320604832e5a334a6eb81e4af))
+* Implement GcsEvalSetResultsManager to handle storage of eval sets on GCS, and refactor eval set results manager ([0a5cf45](https://github.com/google/adk-python/commit/0a5cf45a75aca7b0322136b65ca5504a0c3c7362))
+* Re-factor some eval sets manager logic, and implement GcsEvalSetsManager to handle storage of eval sets on GCS ([1551bd4](https://github.com/google/adk-python/commit/1551bd4f4d7042fffb497d9308b05f92d45d818f))
+* Support real time input config ([d22920b](https://github.com/google/adk-python/commit/d22920bd7f827461afd649601326b0c58aea6716))
+* Support refresh access token automatically for rest_api_tool ([1779801](https://github.com/google/adk-python/commit/177980106b2f7be9a8c0a02f395ff0f85faa0c5a))
+
+### Bug Fixes
+
+* Fix Agent generate config err ([#1305](https://github.com/google/adk-python/issues/1305)) ([badbcbd](https://github.com/google/adk-python/commit/badbcbd7a464e6b323cf3164d2bcd4e27cbc057f))
+* Fix Agent generate config error ([#1450](https://github.com/google/adk-python/issues/1450)) ([694b712](https://github.com/google/adk-python/commit/694b71256c631d44bb4c4488279ea91d82f43e26))
+* Fix liteLLM test failures ([fef8778](https://github.com/google/adk-python/commit/fef87784297b806914de307f48c51d83f977298f))
+* Fix tracing for live ([58e07ca](https://github.com/google/adk-python/commit/58e07cae83048d5213d822be5197a96be9ce2950))
+* Merge custom http options with adk specific http options in model api request ([4ccda99](https://github.com/google/adk-python/commit/4ccda99e8ec7aa715399b4b83c3f101c299a95e8))
+* Remove unnecessary double quote on Claude docstring ([bbceb4f](https://github.com/google/adk-python/commit/bbceb4f2e89f720533b99cf356c532024a120dc4))
+* Set explicit project in the BigQuery client ([6d174eb](https://github.com/google/adk-python/commit/6d174eba305a51fcf2122c0fd481378752d690ef))
+* Support streaming in litellm + adk and add corresponding integration tests ([aafa80b](https://github.com/google/adk-python/commit/aafa80bd85a49fb1c1a255ac797587cffd3fa567))
+* Support project-based gemini model path to use google_search_tool ([b2fc774](https://github.com/google/adk-python/commit/b2fc7740b363a4e33ec99c7377f396f5cee40b5a))
+* Update conversion between Celsius and Fahrenheit ([1ae176a](https://github.com/google/adk-python/commit/1ae176ad2fa2b691714ac979aec21f1cf7d35e45))
+
+### Chores
+
+* Set `agent_engine_id` in the VertexAiSessionService constructor, also use the `agent_engine_id` field instead of overriding `app_name` in FastAPI endpoint ([fc65873](https://github.com/google/adk-python/commit/fc65873d7c31be607f6cd6690f142a031631582a))
+
+
+
 ## [1.3.0](https://github.com/google/adk-python/compare/v1.2.1...v1.3.0) (2025-06-11)
 
 
